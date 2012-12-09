@@ -3,6 +3,7 @@
 
 start() ->
   {ok, LSock} = gen_tcp:listen(5500, [binary, {packet, 0}, {active, false}]),
+  inet:setopts(LSock, [{recbuf,16384}]), % arbitrary value -- split up & iterate to allow higher? -TB
   loop(LSock).
     
 loop(LSock) ->
@@ -21,15 +22,25 @@ handle(Sock) ->
   
   % call the function
   io:format("~p:~p(~p)~n", [Module, Function, Params]),
-  Return = apply(list_to_atom(Module), list_to_atom(Function), tuple_to_list(Params)),
-  
+
+  Result = safe_apply(Module, Function, Params),
+
   % send the response
-  gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", Return}, {"error", null}, {"id", Id}]))),
+  gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", element(2, Result)}, {"error", null}, {"id", Id}]))),
   ok = gen_tcp:close(Sock).
-  
+
 parse(Json) ->
   {json_object, Body} = Json,
   {value, {"method", Method}} = lists:keysearch("method", 1, Body),
   {value, {"params", Params}} = lists:keysearch("params", 1, Body),
   {value, {"id", Id}} = lists:keysearch("id", 1, Body),
   {Method, Params, Id}.
+
+safe_apply(Module, Function, Params) ->
+  try
+    {good, apply(list_to_atom(Module), list_to_atom(Function), tuple_to_list(Params))}
+  catch
+    _:_ -> {bad, error}
+  end.
+
+
