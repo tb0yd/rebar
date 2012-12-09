@@ -55,3 +55,12 @@ response. The Ruby client object simply accepts any method name, captures it
 with method_missing, wraps everything up in a JSON-RPC request, fires it off,
 waits for the response, and then extracts the result out of the JSON-RPC
 response, returning it like a normal Ruby call.
+
+tyler's notes
+
+erl -pa .
+rebar:start().
+> load 'client.rb'; load 'erlang_process';
+> p = ErlangProcess.new(:proc1, 123)
+> p.get
+ => 123

@@ -2,7 +2,7 @@
 -export([start/0, handle/1]).
 
 start() ->
-  {ok, LSock} = gen_tcp:listen(5500, [binary, {packet, 0}, {active, false}]),
+  {ok, LSock} = gen_tcp:listen(5500, [binary, {packet, 0}, {active, false}, {reuseaddr, true}]),
   inet:setopts(LSock, [{recbuf,16384}]), % arbitrary value -- split up & iterate to allow higher? -TB
   loop(LSock).
     

@@ -6,4 +6,8 @@ start_process(Process_Name, Data) ->
   true.
 
 send_to_process(Process_Name, Cmd) ->
-  list_to_atom(Process_Name) ! Cmd.
+  whereis(list_to_atom(Process_Name)) ! {list_to_atom(Cmd), self()},
+  receive
+    Data -> Data
+  end.
+
