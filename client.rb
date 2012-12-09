@@ -2,6 +2,7 @@ require 'rubygems'
 require 'socket'
 require 'json'
 
+#Usage: erlang = Rebar::Erlang.new(:funs, '127.0.0.1', 5500)
 module Rebar
   class Erlang
     def initialize(mod, address, port)
@@ -39,32 +40,3 @@ module Rebar
     end
   end
 end
-
-
-# def fac(n)
-#   (2..n).inject(1) { |f, n| f * n }
-# end
-# 
-# erlang = Erlang.new(:funs, '127.0.0.1', 5500)
-# 
-# require 'benchmark'
-# 
-# n = 100
-# Benchmark.bm(7) do |x|
-#   x.report("ruby:") { n.times { fac(50) } }
-#   x.report("erlang:") { n.times { erlang.fac(50) } }
-# end
-
-
-
-
-erlang = Rebar::Erlang.new(:funs, '127.0.0.1', 5500)
-
-ans = erlang.add(1, 2)
-puts "1 + 2 = #{ans}"
-
-ans = erlang.cat("foo", "bar")
-puts "foobar = #{ans}"
-
-ans = erlang.fac(10)
-puts "fac(10) = #{ans}"
