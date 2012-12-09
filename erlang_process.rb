@@ -7,6 +7,7 @@ class ErlangProcess
   end
 
   def method_missing(cmd, *args)
-    ERLANG.send_to_process(@process_name, cmd)
+    args = [cmd] + args
+    ERLANG.send_to_process(@process_name, *args)
   end
 end

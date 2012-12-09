@@ -7,6 +7,10 @@ start(Data) ->
       io:format("sending data: ~p~n", [Data]),
       Pid ! Data,
       start(Data);
-    {stop, _} ->
-      ok
+    {set, Pid, Data2} ->
+      io:format("setting data: ~p~n", [Data2]),
+      Pid ! {Data, Data2},
+      start(Data2);
+    {stop, Pid} ->
+      Pid ! ok
   end.
