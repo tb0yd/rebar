@@ -2,22 +2,23 @@ require 'rubygems'
 require 'socket'
 require 'json'
 
-#Usage: erlang = Rebar::Erlang.new(:funs, '127.0.0.1', 5500)
+#Usage: erlang = Rebar::Erlang.new(:process_1, '127.0.0.1', 5500)
 module Rebar
   class Erlang
-    def initialize(mod, address, port)
-      @mod = mod.to_s
+    def initialize(name, address='127.0.0.1', port=5500)
+      @name = name.to_s
       @address = address
       @port = port
+      rpc("process_access:start_process", [@name, nil])
     end
   
     def method_missing(*args)
       method, *params = args
-      rpc(method, params)
+      rpc("process_access:send_to_process", [@name, method, *params])
     end
   
     def marshal(fun, args)
-      {:method => @mod + ":" + fun.to_s, :params => args, :id => 0}.to_json
+      {:method => fun, :params => args, :id => 0}.to_json
     end
   
     def demarshal(str)
