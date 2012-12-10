@@ -60,7 +60,11 @@ tyler's notes
 
 erl -pa .
 rebar:start().
-> load 'client.rb'; load 'erlang_process';
-> p = ErlangProcess.new(:proc1, 123)
-> p.get
- => 123
+> load 'client.rb';
+> proc1 = Rebar::Erlang.new(:proc1)
+> proc1.get
+ => nil
+> proc1.set "hi"
+ => [nil, "hi"]
+> proc1.get
+ => "hi"
