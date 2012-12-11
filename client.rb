@@ -9,7 +9,7 @@ module Rebar
       @name = name.to_s
       @address = address
       @port = port
-      rpc("process_access:start_process", [@name, nil])
+      rpc("process_access:start_process", [@name, []])
     end
   
     def method_missing(*args)
