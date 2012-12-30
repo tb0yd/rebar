@@ -1,28 +1,39 @@
 %% module for treating creating a tree of processes to model incoming
 %% JSON objects
 -module(process).
--export([start/1]).
+-behaviour(gen_server).
 
-%% TODO: use gen_server?
-start(Data) ->
-  loop(process_data(Data)).
+-export([init/1, handle_call/3, terminate/2, handle_cast/2, code_change/3, handle_info/2]).
 
-loop(Old_Data) ->
-  receive
-    {get, Pid} ->
-      Displayed_Data = display_data(Old_Data),
-      io:format("sending data: ~p~n", [Displayed_Data]),
-      Pid ! Displayed_Data,
-      loop(Old_Data);
-    {set, Pid, Unprocessed_Data} ->
-      Data = process_data(Unprocessed_Data),
-      Displayed_Data = display_data(Data),
-      io:format("setting data: ~p~n", [Displayed_Data]),
-      Pid ! {display_data(Old_Data), Displayed_Data},
-      loop(Data);
-    {stop, Pid} ->
-      Pid ! ok
-  end.
+init(Data) ->
+  {ok, process_data(Data)}.
+
+handle_call(get, _From, State) ->
+  Displayed_Data = display_data(State),
+  io:format("sending data: ~p~n", [Displayed_Data]),
+  {reply, Displayed_Data, State};
+
+handle_call({set, NewState}, _From, State) ->
+  Data = process_data(NewState),
+  Displayed_Data = display_data(Data),
+  Displayed_Old_Data = display_data(State),
+  io:format("setting data: ~p~n", [Displayed_Data]),
+  {reply, {Displayed_Old_Data, Displayed_Data}, Data};
+
+handle_call(stop, _From, State) ->
+  {stop,stopped,ok,State}.
+
+handle_cast(_, State) ->
+  {noreply, State}.
+
+handle_info(_, State) ->
+  {noreply,State}.
+
+code_change(_, State, _) ->
+  {ok, State}.
+
+terminate(Reason, _) ->
+  io:format("stopping...~p~n", [Reason]).
 
 process_data(Data) ->
   process_data(Data, " ").
@@ -79,8 +90,7 @@ store_list([H|T], Result, Sep) when is_tuple(H) ->
         _Data -> ok
       end;
     false ->
-      Proc = spawn(process, start, [Data]),
-      register(list_to_atom(Child_Proc_Name), Proc)
+      {ok, _} = gen_server:start_link({local, list_to_atom(Child_Proc_Name)}, process, Data, [])
   end,
   store_list(T, [Child_Proc_Name|Result], Sep).
 
@@ -90,10 +100,6 @@ get_json([], Result) ->
   {json_object, Result};
 
 get_json([H|T], Result) ->
-  list_to_atom(H) ! {get, self()},
   Json_Key = lists:last(string:tokens(H, " ")),
-  receive
-    Data ->
-      get_json(T, [{Json_Key, Data}|Result])
-  end.
-
+  Data = gen_server:call(whereis(list_to_atom(H)), get),
+  get_json(T, [{Json_Key, Data}|Result]).

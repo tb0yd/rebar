@@ -4,30 +4,25 @@
 start_process(Process_Name, Data) ->
   case whereis(list_to_atom(Process_Name)) of
     undefined ->
-      register(list_to_atom(Process_Name), spawn(process, start, [Data])),
+      {ok, _} = gen_server:start_link({local, list_to_atom(Process_Name)}, process, [Data], []),
       true;
     _Pid -> false
   end.
 
 send_to_process(Process_Name, Cmd) ->
   case whereis(list_to_atom(Process_Name)) of
-    _Pid when is_pid(_Pid) ->
-      _Pid ! {list_to_atom(Cmd), self()},
-      receive
-        Data -> Data
-      end;
+    _Pid when is_pid(_Pid) -> gen_server:call(_Pid, list_to_atom(Cmd));
     undefined -> error
   end.
 
 send_to_process(Process_Name, Cmd, Data) ->
-  whereis(list_to_atom(Process_Name)) ! {list_to_atom(Cmd), self(), Data},
-  receive
-    RData -> RData
+  case whereis(list_to_atom(Process_Name)) of
+    _Pid when is_pid(_Pid) -> gen_server:call(_Pid, {list_to_atom(Cmd), Data});
+    undefined -> error
   end.
 
 send_to_process(Process_Name, Cmd, Data, Data2) ->
-  whereis(list_to_atom(Process_Name)) ! {list_to_atom(Cmd), self(), Data, Data2},
-  receive
-    RData -> RData
+  case whereis(list_to_atom(Process_Name)) of
+    _Pid when is_pid(_Pid) -> gen_server:call(_Pid, {list_to_atom(Cmd), Data, Data2});
+    undefined -> error
   end.
-
