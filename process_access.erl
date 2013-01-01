@@ -4,7 +4,7 @@
 start_process(Process_Name, Data) ->
   case whereis(list_to_atom(Process_Name)) of
     undefined ->
-      {ok, _} = gen_server:start_link({local, list_to_atom(Process_Name)}, process, [Data], []),
+      {ok, _} = gen_server:start_link({local, list_to_atom(Process_Name)}, process, Data, []),
       true;
     _Pid -> false
   end.
