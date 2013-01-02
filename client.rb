@@ -9,12 +9,16 @@ module Rebar
       @name = name.to_s
       @address = address
       @port = port
-      rpc("process_access:start_process", [@name, []])
+
+      @sock = TCPSocket.new(@address, @port)
+      @sock.write({:start_process => @name}.to_json)
+
+      demarshal(@sock.gets)
     end
   
     def method_missing(*args)
       method, *params = args
-      rpc("process_access:send_to_process", [@name, method, *params])
+      rpc("#{@name}:#{method}", params)
     end
   
     def marshal(fun, args)

@@ -16,29 +16,42 @@ handle(Sock) ->
   {ok, Bin} = gen_tcp:recv(Sock, 0),
   {ok, Json} = json:decode_string(binary_to_list(Bin)),
   
-  % pull the request apart
-  {Method, Params, Id} = parse(Json),
-  [Module, Function] = string:tokens(Method, ":"),
+  % pull the request apart (what kind of gen_server command)
+  case parse(Json) of
+    {call, {Msg, Params}} ->
+      [Process_Name, Cmd] = string:tokens(Msg, ":"),
+      io:format("~p:~p(~p)~n", [Process_Name, Cmd, Params]),
+
+      % call the function
+      Result = safe_apply(Process_Name, Cmd, Params),
+      gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", element(2, Result)}, {"error", null}])));
+    {start_link, Process_Name} ->
+      gen_server:start_link({local, Process_Name}, process, [], []),
+      gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", "ok"}, {"error", null}])))
+  end,
   
-  % call the function
-  io:format("~p:~p(~p)~n", [Module, Function, Params]),
-
-  Result = safe_apply(Module, Function, Params),
-
   % send the response
-  gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", element(2, Result)}, {"error", null}, {"id", Id}]))),
   ok = gen_tcp:close(Sock).
 
 parse(Json) ->
   {json_object, Body} = Json,
-  {value, {"method", Method}} = lists:keysearch("method", 1, Body),
-  {value, {"params", Params}} = lists:keysearch("params", 1, Body),
-  {value, {"id", Id}} = lists:keysearch("id", 1, Body),
-  {Method, Params, Id}.
+  case lists:keysearch("start_process", 1, Body) of
+    {value, {"start_process", Process_Name}} ->
+      {start_link, list_to_atom(Process_Name)};
+    false ->
+      {value, {"method", Method}} = lists:keysearch("method", 1, Body),
+      {value, {"params", Params}} = lists:keysearch("params", 1, Body),
+      {call, {Method, Params}}
+  end.
 
-safe_apply(Module, Function, Params) ->
+safe_apply(Process_Name, Cmd, Params) ->
   try
-    {good, apply(list_to_atom(Module), list_to_atom(Function), tuple_to_list(Params))}
+    case whereis(list_to_atom(Process_Name)) of
+      Pid when is_pid(Pid) ->
+        {good, gen_server:call(Pid, list_to_tuple([list_to_atom(Cmd) | tuple_to_list(Params)]))};
+      undefined ->
+        {bad, process_not_started}
+    end
   catch
     _:_ -> {bad, error}
   end.

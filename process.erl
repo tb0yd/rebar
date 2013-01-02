@@ -8,7 +8,7 @@
 init(Data) ->
   {ok, process_data(Data)}.
 
-handle_call(get, _From, State) ->
+handle_call({get}, _From, State) ->
   Displayed_Data = display_data(State),
   io:format("sending data: ~p~n", [Displayed_Data]),
   {reply, Displayed_Data, State};
@@ -20,7 +20,7 @@ handle_call({set, NewState}, _From, State) ->
   io:format("setting data: ~p~n", [Displayed_Data]),
   {reply, {Displayed_Old_Data, Displayed_Data}, Data};
 
-handle_call(stop, _From, State) ->
+handle_call({stop}, _From, State) ->
   {stop,stopped,ok,State}.
 
 handle_cast(_, State) ->
@@ -101,5 +101,5 @@ get_json([], Result) ->
 
 get_json([H|T], Result) ->
   Json_Key = lists:last(string:tokens(H, " ")),
-  Data = gen_server:call(whereis(list_to_atom(H)), get),
+  Data = gen_server:call(whereis(list_to_atom(H)), {get}),
   get_json(T, [{Json_Key, Data}|Result]).
