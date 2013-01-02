@@ -1,6 +1,6 @@
 %% module for treating creating a tree of processes to model incoming
 %% JSON objects
--module(process).
+-module(json_tree).
 -behaviour(gen_server).
 
 -export([init/1, handle_call/3, terminate/2, handle_cast/2, code_change/3, handle_info/2]).
@@ -90,7 +90,7 @@ store_list([H|T], Result, Sep) when is_tuple(H) ->
         _Data -> ok
       end;
     false ->
-      {ok, _} = gen_server:start_link({local, list_to_atom(Child_Proc_Name)}, process, Data, [])
+      {ok, _} = gen_server:start_link({local, list_to_atom(Child_Proc_Name)}, json_tree, Data, [])
   end,
   store_list(T, [Child_Proc_Name|Result], Sep).
 

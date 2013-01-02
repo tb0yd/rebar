@@ -1,4 +1,4 @@
--module(rebar).
+-module(brother).
 -export([start/0, handle/1]).
 
 start() ->
@@ -8,7 +8,7 @@ start() ->
     
 loop(LSock) ->
   {ok, Sock} = gen_tcp:accept(LSock),
-  spawn(rebar, handle, [Sock]),  
+  spawn(brother, handle, [Sock]),  
   loop(LSock).
   
 handle(Sock) ->
