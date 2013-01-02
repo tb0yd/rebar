@@ -25,12 +25,12 @@ handle(Sock) ->
       % call the function
       Result = safe_apply(Process_Name, Cmd, Params),
       gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", element(2, Result)}, {"error", null}])));
-    {start_link, Process_Name} ->
+    {start_link, Module, Process_Name} ->
       case whereis(Process_Name) of
         Pid when is_pid(Pid) ->
           gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", "already started"}, {"error", null}])));
         undefined ->
-          gen_server:start_link({local, Process_Name}, process, [], []),
+          gen_server:start_link({local, Process_Name}, Module, [], []),
           gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", "ok"}, {"error", null}])))
       end
   end,
@@ -42,7 +42,8 @@ parse(Json) ->
   {json_object, Body} = Json,
   case lists:keysearch("start_process", 1, Body) of
     {value, {"start_process", Process_Name}} ->
-      {start_link, list_to_atom(Process_Name)};
+      {value, {"module", Module}} = lists:keysearch("module", 1, Body),
+      {start_link, list_to_atom(Module), list_to_atom(Process_Name)};
     false ->
       {value, {"method", Method}} = lists:keysearch("method", 1, Body),
       {value, {"params", Params}} = lists:keysearch("params", 1, Body),

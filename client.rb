@@ -2,16 +2,19 @@ require 'rubygems'
 require 'socket'
 require 'json'
 
-#Usage: erlang = Rebar::Erlang.new(:process_1, '127.0.0.1', 5500)
-module Rebar
-  class Erlang
-    def initialize(name, address='127.0.0.1', port=5500)
-      @name = name.to_s
+#Usage:
+#  pr1 = Brother.process(:pr1) # starts a gen_server with module "process" and register at "pr1"
+#  pr2 = Brother.thing(:pr2) # starts a gen_server with module "thing" and register at "pr2"
+module Brother
+  class ErlangProcess
+    def initialize(module_name, process_name, address='127.0.0.1', port=5500)
+      @module = module_name.to_s
+      @name = process_name.to_s
       @address = address
       @port = port
 
       @sock = TCPSocket.new(@address, @port)
-      @sock.write({:start_process => @name}.to_json)
+      @sock.write({:start_process => @name, :module => @module}.to_json)
       demarshal(@sock.gets)
     end
   
@@ -42,5 +45,9 @@ module Rebar
       end
       demarshal(json_response_string)
     end
+  end
+
+  def self.method_missing(module_name, process_name)
+    Brother::ErlangProcess.new(module_name, process_name)
   end
 end
