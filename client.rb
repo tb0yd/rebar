@@ -12,7 +12,6 @@ module Rebar
 
       @sock = TCPSocket.new(@address, @port)
       @sock.write({:start_process => @name}.to_json)
-
       demarshal(@sock.gets)
     end
   

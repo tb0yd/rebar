@@ -26,8 +26,13 @@ handle(Sock) ->
       Result = safe_apply(Process_Name, Cmd, Params),
       gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", element(2, Result)}, {"error", null}])));
     {start_link, Process_Name} ->
-      gen_server:start_link({local, Process_Name}, process, [], []),
-      gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", "ok"}, {"error", null}])))
+      case whereis(Process_Name) of
+        Pid when is_pid(Pid) ->
+          gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", "already started"}, {"error", null}])));
+        undefined ->
+          gen_server:start_link({local, Process_Name}, process, [], []),
+          gen_tcp:send(Sock, json:encode(json:obj_from_list([{"result", "ok"}, {"error", null}])))
+      end
   end,
   
   % send the response
