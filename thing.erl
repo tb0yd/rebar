@@ -6,7 +6,7 @@ init(_) ->
   {ok, []}.
 
 handle_call([puts, Bin], _From, State) ->
-  {reply, ok, [State,Bin,<<"\n">>]};
+  {reply, true, [State,Bin,<<"\n">>]};
   
 handle_call([result], _From, State) ->
   Result = list_to_binary([State, <<"Fun for everyone!\n">>]),

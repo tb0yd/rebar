@@ -45,11 +45,17 @@ module Brer
       sock.write([:call, @name, fun, args].to_json)
       demarshal(sock.gets)
     end
+  
+    def cast(fun, args)
+      sock = TCPSocket.new('127.0.0.1', 5500)
+      sock.write([:cast, @name, fun, args].to_json)
+      nil
+    end
 
     def start_link
       # TODO: don't hardcode the erlang module
       sock = TCPSocket.new('127.0.0.1', 5500)
-      sock.write([:init, :thing, @name, []].to_json)
+      sock.write([:start_link, :thing, @name, []].to_json)
       demarshal(sock.gets)
     end
   end
