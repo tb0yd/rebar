@@ -3,6 +3,7 @@ require 'socket'
 require 'json'
 
 module Brer
+  class ErlangTimeoutError < StandardError; end
   class ErlangProcess
     def initialize(name, target_class=nil)
       raise ArgumentError.new if target_class.nil? && !block_given?
@@ -13,37 +14,40 @@ module Brer
         @target = target_class.new
       else
         @target = yield
+        #if @target.is_a?(Brer::TargetObject)
+        #  cast(:initialize_args, @target.initialize_args.to_json)
+        #end
       end
 
       start_link
     end
   
-    def method_missing(*args)
-      method, *params = args
-      #if @timed_out
-      #  @target.send(method, *params)
-      #else
-        result = call(method, params)
-
-        #if result == "timeout" # TODO: make into a symbol
-        #  @timed_out = true
-        #  @target.send(method, *params)
-        #else
-          result
-        #end
-      #end
+    def method_missing(method, *params)
+      call(method, params)
     end
 
     private
   
     def demarshal(str)
-      JSON.parse(str)["result"]
+      json = JSON.parse(str)
+      if json.has_key?("ok")
+        json["ok"]
+      elsif json["error"] == "timeout"
+        @timeout = true
+        raise ErlangTimeoutError.new
+      end
     end
   
     def call(fun, args)
-      sock = TCPSocket.new('127.0.0.1', 5500)
-      sock.write([:call, @name, fun, args].to_json)
-      demarshal(sock.gets)
+      if @timeout
+        @target.send(fun, *args)
+      else
+        sock = TCPSocket.new('127.0.0.1', 5500)
+        sock.write([:call, @name, fun, args].to_json)
+        demarshal(sock.gets)
+      end
+    rescue ErlangTimeoutError => e
+      @target.send(fun, *args)
     end
   
     def cast(fun, args)
@@ -57,6 +61,7 @@ module Brer
       sock = TCPSocket.new('127.0.0.1', 5500)
       sock.write([:start_link, :thing, @name, []].to_json)
       demarshal(sock.gets)
+    rescue ErlangTimeoutError => e
     end
   end
 end

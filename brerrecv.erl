@@ -22,7 +22,7 @@ handle(Sock) ->
   % get result
   Result = brergs:send(A, B, C, D),
 
-  % send result back
-  gen_tcp:send(Sock, jiffy:encode({[{result, Result}]})),
+  %send result back
+  gen_tcp:send(Sock, jiffy:encode({[Result]})),
   ok = gen_tcp:close(Sock).
 
