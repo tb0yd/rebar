@@ -14,9 +14,9 @@ module Brer
         @target = target_class.new
       else
         @target = yield
-        #if @target.is_a?(Brer::TargetObject)
-        #  cast(:initialize_args, @target.initialize_args.to_json)
-        #end
+        if @target.is_a?(Brer::TargetObject)
+          cast(:initialize_args, *(@target.initialize_args))
+        end
       end
 
       start_link
@@ -63,5 +63,24 @@ module Brer
       demarshal(sock.gets)
     rescue ErlangTimeoutError => e
     end
+  end
+  class TargetObject
+    attr_reader :initialize_args
+    def initialize(*args)
+      @initialize_args = args
+    end
+  end
+end
+
+class Thing < Brer::TargetObject
+  def initialize(str)
+    super
+    @body = str
+  end
+  def puts(str)
+    @body = @body + str + "\n"
+  end
+  def result
+    @body
   end
 end

@@ -18,5 +18,5 @@ send(call, Name, Fun, Args) ->
   end;
   
 send(cast, Name, Fun, Args) ->
-  gen_server:cast(Name, [Fun|Args]).
+  {gen_server:cast(Name, [Fun|Args]), null}.
 
