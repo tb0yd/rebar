@@ -8,6 +8,10 @@ init(_) ->
 handle_call([puts, Bin], _From, State) ->
   {reply, true, [State,Bin,<<"\n">>]};
   
+handle_call([hangputs, Bin], _From, State) ->
+  timer:sleep(2000),
+  {reply, true, [State,Bin,<<"\n">>]};
+  
 handle_call([result], _From, State) ->
   Result = list_to_binary([State, <<"Fun for everyone!\n">>]),
   {reply, Result, State}.

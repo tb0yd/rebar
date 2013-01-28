@@ -20,3 +20,5 @@ send(call, Name, Fun, Args) ->
 send(cast, Name, Fun, Args) ->
   {gen_server:cast(Name, [Fun|Args]), null}.
 
+%% {status,_,_,[_,running,_,_,Data]} = sys:get_status(e).
+%% proplists:get_value("State", lists:flatten(proplists:get_all_values(data, Data))).

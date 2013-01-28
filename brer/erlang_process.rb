@@ -2,8 +2,6 @@ require 'rubygems'
 require 'socket'
 require 'json'
 
-# TODO: specs
-# TODO: break all concerns out into separate files
 module Brer
   class ErlangTimeoutError < StandardError; end
   class UnretraceableStateError < StandardError; end
@@ -116,12 +114,3 @@ module Brer
   end
 end
 
-class Thing
-  def puts(str)
-    @body = (@body || "") + str + "\n"
-  end
-  alias hangputs puts
-  def result
-    @body
-  end
-end
