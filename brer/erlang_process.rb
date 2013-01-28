@@ -9,6 +9,7 @@ module Brer
     def initialize(name, target_class=nil)
       raise ArgumentError.new if target_class.nil? && !block_given?
       raise ArgumentError.new if !target_class.nil? && block_given?
+      raise ArgumentError.new unless name.is_a?(Symbol)
 
       @name = name # the process moniker
 
@@ -18,13 +19,16 @@ module Brer
       else
         # user is targeting an existing object, so we can reflect on the object
         @target = yield
-        if @target.is_a?(Brer::TargetObject)
-          # lose ability to roll back (it's a cast)
-          cast(:initialize_args, *(@target.initialize_args))
-        end
       end
 
       start_link
+
+      if @target && @target.is_a?(Brer::TargetObject)
+        # lose ability to roll back (it's a cast)
+        @target.initialize_args.each do |arg|
+          cast(:initialize, arg)
+        end
+      end
     end
   
     # all non-defined methods become casts
@@ -69,22 +73,24 @@ module Brer
         sock = TCPSocket.new('127.0.0.1', 5500)
         sock.write([:call, @name, fun, args].to_json)
         @history << [fun, args] unless @history == :lost
-        demarshal(sock.gets)
-      end
-    rescue ErlangTimeoutError => e
-      if @history == :lost
-        # erlang timed out and you've done async operations. there's no way to 
-        # retrace your state to continue with your target object.
-        raise UnretraceableStateError.new
-      else
-        # try and repeat all messages passed to erlang from the beginning to now
-        # in target object
-        @history.each do |hist|
-          fun, args = hist
-          last = target_object.send(fun, *args)
+        begin
+          result = demarshal(sock.gets)
+        rescue ErlangTimeoutError => e
+          if @history == :lost
+            # erlang timed out and you've done async operations. there's no way to 
+            # retrace your state to continue with your target object.
+            raise UnretraceableStateError.new
+          else
+            # try and repeat all messages passed to erlang from the beginning to now
+            # in target object
+            @history.each do |hist|
+              fun, args = hist
+              result = target_object.send(fun, *args)
+            end
+          end
         end
+        result
       end
-      last # return value of the last message
     end
   
     def cast(fun, args)

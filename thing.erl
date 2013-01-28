@@ -16,8 +16,8 @@ handle_call([result], _From, State) ->
   Result = list_to_binary([State, <<"Fun for everyone!\n">>]),
   {reply, Result, State}.
 
-handle_cast([initialize_args|Args], _) ->
-  {noreply, Args};
+handle_cast([initialize|Arg], State) ->
+  {noreply, [State,Arg]};
 
 handle_cast(_, State) ->
   {noreply, State}.
