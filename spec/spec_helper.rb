@@ -1,2 +1,2 @@
-require File.join(File.dirname(__FILE__), '..', 'brer', 'erlang_process')
+require File.join(File.dirname(__FILE__), '..', 'lib', 'brer', 'erlang_process')
 
