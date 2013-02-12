@@ -10,71 +10,69 @@ You can consider it an acronym too, as BrER (Bridge for Erlang and Ruby), or BRE
 
 The Ruby API works like this. Let's start by defining a new Ruby class which incrementally builds a plaintext document:
 
-`
-class Thing
-  def puts(str)
-    @body = (@body || "") + str + "/n"
-  end
+```ruby
+    class Thing
+      def puts(str)
+        @body = (@body || "") + str + "/n"
+      end
 
-  def to_s
-    @body
-  end
-end
-`
+      def to_s
+        @body
+      end
+    end
+```
 
 Now, here is an example of the Brer API using this new class:
 
 
-`
-thing = Brer::ErlangProcess[:thing] { Thing.new }
-`
+```ruby
+    thing = Brer::ErlangProcess[:thing] { Thing.new }
+```
 
 ErlangProcess#[] is a factory method for Erlang processes. It will either start a new Erlang process with the moniker you pass in or return it if one already exists.
 
-`
-thing.puts "Hello world!"
-thing.puts "This is me!"
-thing.puts "Life should be!"
-puts thing.to_s
-`
+```ruby
+    thing.puts "Hello world!"
+    thing.puts "This is me!"
+    thing.puts "Life should be!"
+    puts thing.to_s
+```
 
 These 4 lines are supposed to send messages to the "thing" process in the Erlang virtual machine and await a response from #to_s. But wait! This is all Ruby. Where does Erlang get involved?
 
 Let's create an Erlang module which implements the "Thing" interface:
 
-`
--module(thing).
--exports([puts/2, to_s/1]).
+```erlang
+    -module(thing).
+    -exports([puts/2, to_s/1]).
 
-start() ->
-  {ok, <<"">>}.
+    start() ->
+      {ok, <<"">>}.
 
-puts(State, String) ->
-  {ok, State ++ String}.
-  
-to_s(State) ->
-  {ok, State, State ++ <<"Fun for everyone!\n">>}.
-`
+    puts(State, String) ->
+      {ok, State ++ String}.
+      
+    to_s(State) ->
+      {ok, State, State ++ <<"Fun for everyone!\n">>}.
+```
 
 If you're wondering where the "start" method and oks come from, check the docs for the OTP gen_server behavior which every Brer Erlang process needs to have.
 
 Now the fun part: testing.
 
-`
-> thing.puts "Hello world!"
-=> true
-> thing.puts "This is me!"
-=> true
-> thing.puts "Life should be!"
-=> true
-> puts thing.to_s
-Hello world!
-This is me!
-Life should be!
-Fun for everyone!
-=> true
->
-` 
+    > thing.puts "Hello world!"
+    => true
+    > thing.puts "This is me!"
+    => true
+    > thing.puts "Life should be!"
+    => true
+    > puts thing.to_s
+    Hello world!
+    This is me!
+    Life should be!
+    Fun for everyone!
+    => true
+    >
 
 As you can see, the Ruby interpreter delivers all messages to the Erlang process and receives a response from the thing:to_s function.
 
@@ -86,30 +84,29 @@ And this is the happy path. So now all the interesting problems come.
 
 For example, say we make this change:
 
-`
-start() ->
-  erlang:wait(5000), %% wait for 5 seconds
-  {ok, <<"">>}.
-`
+```erlang
+    start() ->
+      erlang:wait(5000), %% wait for 5 seconds
+      {ok, <<"">>}.
+```
 
 So we have caused the Erlang program to hang on startup. Let's run the same test:
 
-`
-> thing.puts "Hello world!"
-=> "Hello world!"
-> thing.puts "This is me!"
-=> "Hello world!/nThis is me!"
-> thing.puts "Life should be!"
-=> "Hello world!/nThis is me!/nLife should be!/n"
-> puts thing.to_s
-(…2 seconds elapse…)
-Hello world!
-This is me!
-Life should be!
-…
-...
-=> nil
->` 
+    > thing.puts "Hello world!"
+    => "Hello world!"
+    > thing.puts "This is me!"
+    => "Hello world!/nThis is me!"
+    > thing.puts "Life should be!"
+    => "Hello world!/nThis is me!/nLife should be!/n"
+    > puts thing.to_s
+    (…2 seconds elapse…)
+    Hello world!
+    This is me!
+    Life should be!
+    …
+    ...
+    => nil
+    > 
 
 Fellow Ruby aficionados will probably notice by the output that the messages have all been delivered to the target Thing object. If an ErlangProcess experiences a timeout, no further attempts will be made to contact Erlang until a new ErlangProcess object is instantiated.
 
@@ -123,41 +120,38 @@ So any programmer using this framework must prepare for the possibility of all m
 
 For example, try:
 
-`
-class Thing
-  def to_s
-    @body
-  end
-end
-`
+```ruby
+    class Thing
+      def to_s
+        @body
+      end
+    end
+```
 
 And do the same test:
 
-`
-> thing.puts "Hello world!"
-=> true
-> thing.puts "This is me!"
-=> true
-> thing.puts "Life should be!"
-=> true
-> puts thing.to_s
-Hello world!
-This is me!
-Life should be!
-Fun for everyone!
-=> nil
->` 
+    > thing.puts "Hello world!"
+    => true
+    > thing.puts "This is me!"
+    => true
+    > thing.puts "Life should be!"
+    => true
+    > puts thing.to_s
+    Hello world!
+    This is me!
+    Life should be!
+    Fun for everyone!
+    => nil
+    > 
 
 **Problem 3**: What if initializing the target Ruby object is the very operation I was trying to speed up using Erlang? Is it possible to leave that out?
 
 **Answer**: No -- choosing a target object is a requirement. However, there is a workaround for this:
 
-`
-\# instead of:
-\# thing = Brer::ErlangProcess[:thing] { ReallyCostlyToInitializeThing.new }
-\# try:
-thing = Brer::ErlangProcess[:thing, ReallyCostlyToInitializeThing]
-`
+    \# instead of:
+    \# thing = Brer::ErlangProcess[:thing] { ReallyCostlyToInitializeThing.new }
+    \# try:
+    thing = Brer::ErlangProcess[:thing, ReallyCostlyToInitializeThing]
 
 This will allow you to postpone the instantiation of the ReallyCostlyToInitializeThing object until needed. The flipside is that you will not be able to pass in arguments.
 
@@ -168,30 +162,31 @@ This will allow you to postpone the instantiation of the ReallyCostlyToInitializ
 But the good news is that when defining your target object, you can include the Brer::TargetObject module, which automatically serializes  arguments from #new into JSON and passes them to an "init_arg" method on your Erlang module.
 
 For example, you could rewrite our example code like this, for fun:
+```ruby
+    class Thing < String
+      include Brer::TargetObject
+      alias puts <<
+    end
+```
 
-`
-class Thing < String
-  include Brer::TargetObject
-  alias puts <<
-end
-`
+And the Erlang...
 
-`
--module(thing).
--exports([puts/2, to_s/1]).
+```erlang
+    -module(thing).
+    -exports([puts/2, to_s/1]).
 
-start() ->
-  {ok, <<"">>}.
-  
-init_arg(State, String) ->
-  {ok, String}.
+    start() ->
+      {ok, <<"">>}.
+      
+    init_arg(State, String) ->
+      {ok, String}.
 
-puts(State, String) ->
-  {ok, State ++ String}.
-  
-to_s(State) ->
-  {ok, State, State ++ <<"Fun for everyone!\n">>}.
-`
+    puts(State, String) ->
+      {ok, State ++ String}.
+      
+    to_s(State) ->
+      {ok, State, State ++ <<"Fun for everyone!\n">>}.
+```
 
 But it's not really a good idea.
 
