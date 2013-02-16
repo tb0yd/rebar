@@ -70,10 +70,10 @@ describe Brer::ErlangProcess do
   end
 
   describe "initialize arguments" do
-    class Thing3 < Brer::TargetObject; end
+    class Thing3; def initialize(*args) @initialize_args = args; end; attr_reader :initialize_args; end
     class Thing4; def initialize(*args) end end
 
-    it "are passed to target after start_link if it subclasses TargetObject" do
+    it "are passed to target after start_link if it has initialize_args" do
       msgs = []
       @sock.stub(:write) { |msg| msgs << msg }
       Brer::ErlangProcess.new(:p1) { Thing3.new("1", "2", "3") }
@@ -85,7 +85,7 @@ describe Brer::ErlangProcess do
       ]
     end
 
-    it "aren't passed to target if it doesn't subclass TargetObject" do
+    it "aren't passed to target if it doesn't have initialize_args" do
       msgs = []
       @sock.stub(:write) { |msg| msgs << msg }
       Brer::ErlangProcess.new(:p1) { Thing4.new("1", "2", "3") }

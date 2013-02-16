@@ -23,7 +23,7 @@ module Brer
 
       start_link
 
-      if @target && @target.is_a?(Brer::TargetObject)
+      if @target && @target.respond_to?(:initialize_args) && @target.initialize_args.respond_to?(:each)
         # lose ability to roll back (it's a cast)
         @target.initialize_args.each do |arg|
           cast(:initialize, arg)
@@ -110,12 +110,6 @@ module Brer
       demarshal(sock.gets)
     rescue ErlangTimeoutError => e
       # don't care about return value, no history to roll back
-    end
-  end
-  class TargetObject
-    attr_reader :initialize_args # recall args passed to new()
-    def initialize(*args)
-      @initialize_args = args
     end
   end
 end
